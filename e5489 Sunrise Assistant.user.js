@@ -1,12 +1,14 @@
 // ==UserScript==
 // @name         e5489 Sunrise Assistant
 // @namespace    https://github.com/tuzi3040/sunrise-assistant
-// @version      0.2.0
+// @version      0.3.0
 // @description  Simple assistant to help you buy tickets for Sunrise Express on e5489.
 // @author       tuzi3040
 // @match        https://e5489.jr-odekake.net/e5489/cspc/CBDayTimeArriveSelRsvMyDiaPC*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=e5489.jr-odekake.net
 // @grant        none
+// @downloadURL  https://github.com/tuzi3040/sunrise-assistant/raw/master/e5489%20Sunrise%20Assistant.user.js
+// @updateURL    https://github.com/tuzi3040/sunrise-assistant/raw/master/e5489%20Sunrise%20Assistant.user.js
 // ==/UserScript==
 
 const trainName = {
@@ -245,6 +247,58 @@ class e5489Query extends queryParams {
     }
 }
 
+function reloadStationList(departureStationDiv, arrivalStationDiv, lastOption) {
+    let departureStationSelect = document.createElement("select");
+    departureStationSelect.name = "departure";
+    departureStationSelect.id = "departure-select";
+    departureStationSelect.style = "width: 10.5em";
+    departureStationSelect.setAttribute("required", "");
+
+    departureStationSelect.addEventListener("change", (event) => {
+        lastOption.departure = event.target.value;
+    });
+
+    for (let i of stationList[lastOption.train].departure) {
+        let departureOption = document.createElement("option");
+        departureOption.value = i;
+        departureOption.innerHTML = i;
+        departureStationSelect.appendChild(departureOption);
+    }
+    let lastSelectedDepartureOption = departureStationSelect.querySelector(`option[value='${lastOption.departure}']`)
+    if (lastSelectedDepartureOption) {
+        lastSelectedDepartureOption.setAttribute("selected", "");
+    } else {
+        lastOption.departure = departureStationSelect.firstChild.value;
+        departureStationSelect.firstChild.setAttribute("selected", "");
+    }
+    departureStationDiv.replaceChild(departureStationSelect, departureStationDiv.lastChild);
+
+    let arrivalStationSelect = document.createElement("select");
+    arrivalStationSelect.name = "arrival";
+    arrivalStationSelect.id = "arrival-select";
+    arrivalStationSelect.style = "width: 10.5em";
+    arrivalStationSelect.setAttribute("required", "");
+
+    arrivalStationSelect.addEventListener("change", (event) => {
+        lastOption.arrival = event.target.value;
+    });
+
+    for (let i of stationList[lastOption.train].arrival) {
+        let arrivalOption = document.createElement("option");
+        arrivalOption.value = i;
+        arrivalOption.innerHTML = i;
+        arrivalStationSelect.appendChild(arrivalOption);
+    }
+    let lastSelectedArrivalOption = arrivalStationSelect.querySelector(`option[value='${lastOption.arrival}']`)
+    if (lastSelectedArrivalOption) {
+        lastSelectedArrivalOption.setAttribute("selected", "");
+    } else {
+        lastOption.arrival = arrivalStationSelect.lastChild.value;
+        arrivalStationSelect.lastChild.setAttribute("selected", "");
+    }
+    arrivalStationDiv.replaceChild(arrivalStationSelect, arrivalStationDiv.lastChild);
+}
+
 (function() {
     'use strict';
 
@@ -252,6 +306,12 @@ class e5489Query extends queryParams {
     const baseUrl = window.location.href.split('?')[0];
 
     let sunriseQuery = new e5489Query(window.location.href);
+    var lastOption = {
+        train: sunriseQuery.train,
+        departure: sunriseQuery.departure,
+        arrival: sunriseQuery.arrival
+    };
+
 
     infoNode.innerHTML = [
         '<b style="color: #000000">Now querying</b>',
@@ -285,51 +345,8 @@ class e5489Query extends queryParams {
         trainRadio.setAttribute("required", "");
 
         trainRadio.addEventListener("change", (event) => {
-            let departureStationSelect = document.createElement("select");
-            departureStationSelect.name = "departure";
-            departureStationSelect.id = "departure-select";
-            departureStationSelect.style = "width: 10.5em";
-            departureStationSelect.setAttribute("required", "");
-
-            departureStationSelect.addEventListener("change", (event) => {
-                lastSelectedDeparture = event.target.value
-            });
-
-            for (let i of stationList[event.target.id].departure) {
-                let departureOption = document.createElement("option");
-                departureOption.value = i;
-                departureOption.innerHTML = i;
-                departureStationSelect.appendChild(departureOption);
-            }
-            let lastSelectedDepartureOption = departureStationSelect.querySelector(`option[value=${lastSelectedDeparture}]`)
-            if (lastSelectedDepartureOption) {
-                lastSelectedDepartureOption.setAttribute("selected", "");
-            }
-            departureStationDiv.replaceChild(departureStationSelect, departureStationDiv.lastChild);
-
-            let arrivalStationSelect = document.createElement("select");
-            arrivalStationSelect.name = "arrival";
-            arrivalStationSelect.id = "arrival-select";
-            arrivalStationSelect.style = "width: 10.5em";
-            arrivalStationSelect.setAttribute("required", "");
-
-            arrivalStationSelect.addEventListener("change", (event) => {
-                lastSelectedArrival = event.target.value
-            });
-
-            for (let i of stationList[event.target.id].arrival) {
-                let arrivalOption = document.createElement("option");
-                arrivalOption.value = i;
-                arrivalOption.innerHTML = i;
-                arrivalStationSelect.appendChild(arrivalOption);
-            }
-            let lastSelectedArrivalOption = arrivalStationSelect.querySelector(`option[value=${lastSelectedArrival}]`)
-            if (lastSelectedArrivalOption) {
-                lastSelectedArrivalOption.setAttribute("selected", "");
-            } else {
-            arrivalStationSelect.lastChild.setAttribute("selected", "");
-            }
-            arrivalStationDiv.replaceChild(arrivalStationSelect, arrivalStationDiv.lastChild);
+            lastOption.train = event.target.id;
+            reloadStationList(departureStationDiv, arrivalStationDiv, lastOption)
         });
 
         let trainRadioLabel = document.createElement("label");
@@ -381,7 +398,7 @@ class e5489Query extends queryParams {
     departureStationSelect.setAttribute("required", "");
 
     departureStationSelect.addEventListener("change", (event) => {
-        lastSelectedDeparture = event.target.value
+        lastOption.departure = event.target.value
     });
 
     for (let i of stationList[sunriseQuery.train].departure) {
@@ -390,9 +407,22 @@ class e5489Query extends queryParams {
         departureOption.innerHTML = i;
         departureStationSelect.appendChild(departureOption);
     }
-    let lastSelectedDeparture = sunriseQuery.departure;
     departureStationSelect.querySelector(`option[value=${sunriseQuery.departure}]`).setAttribute("selected", "");
     departureStationDiv.appendChild(departureStationSelect);
+
+
+    let stationSwitchBtnDiv = document.createElement("div");
+    stationSwitchBtnDiv.style="display: grid; grid-template-columns: 1fr"
+    let stationSwitchBtn = document.createElement("button");
+    stationSwitchBtn.innerHTML = "⇅";
+    stationSwitchBtn.style = "border-width: 1px; border-color: black; border-style: solid; background-color: white; width: 10em; height: 2em; margin: 5px 0";
+    stationSwitchBtn.addEventListener("click", (event) => {
+        event.preventDefault();
+
+        [lastOption.departure, lastOption.arrival] = [lastOption.arrival, lastOption.departure]
+        reloadStationList(departureStationDiv, arrivalStationDiv, lastOption)
+    });
+    stationSwitchBtnDiv.appendChild(stationSwitchBtn);
 
 
     let arrivalStationDiv = document.createElement("div");
@@ -409,7 +439,7 @@ class e5489Query extends queryParams {
     arrivalStationSelect.setAttribute("required", "");
 
     arrivalStationSelect.addEventListener("change", (event) => {
-        lastSelectedArrival = event.target.value
+        lastOption.arrival = event.target.value
     });
 
     for (let i of stationList[sunriseQuery.train].arrival) {
@@ -418,7 +448,6 @@ class e5489Query extends queryParams {
         arrivalOption.innerHTML = i;
         arrivalStationSelect.appendChild(arrivalOption);
     }
-    let lastSelectedArrival = sunriseQuery.arrival;
     arrivalStationSelect.querySelector(`option[value=${sunriseQuery.arrival}]`).setAttribute("selected", "");
     arrivalStationDiv.appendChild(arrivalStationSelect);
 
@@ -492,6 +521,7 @@ class e5489Query extends queryParams {
     assistantForm.appendChild(trainFieldset);
     assistantForm.appendChild(facilityFieldset);
     assistantForm.appendChild(departureStationDiv);
+    assistantForm.appendChild(stationSwitchBtnDiv);
     assistantForm.appendChild(arrivalStationDiv);
     assistantForm.appendChild(dateTimeDiv);
     assistantForm.appendChild(assistantFormButtonDiv);
